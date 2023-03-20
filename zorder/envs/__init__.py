@@ -1,1 +1,1 @@
-from zorder.envs.grid_world import SelColEnv
+from zorder.envs.sel_col import SelColEnv
