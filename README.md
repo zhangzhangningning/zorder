@@ -6,7 +6,7 @@ For some explanations of these examples, see the [Gym documentation](https://gym
 
 ### Environments
 This repository hosts the examples that are shown [on the environment creation documentation](https://gymnasium.farama.org/tutorials/environment_creation/).
-- `GridWorldEnv`: Simplistic implementation of gridworld environment
+- `SelColEnv`: Simplistic implementation of gridworld environment
 
 ### Wrappers
 This repository hosts the examples that are shown [on wrapper documentation](https://gymnasium.farama.org/api/wrappers/).
