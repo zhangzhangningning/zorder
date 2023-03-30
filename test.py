@@ -13,5 +13,5 @@ class QLearning(DQN):
 
 
 model = QLearning('MultiInputPolicy', env, verbose=1)
-model.learn(total_timesteps=10000)
+model.learn(total_timesteps=4)
 
