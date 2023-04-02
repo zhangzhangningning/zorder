@@ -1,13 +1,12 @@
 import pandas as pd
 import numpy as np
 import NewInterleaveBits as lb
-# from Partitioner import RangePartitioner
 import csample
-import workload
-import os
-import pickle
 import random
 import bisect
+import pickle
+import workload
+import subprocess
 from scipy.stats import rankdata
 
 # 蓄水池采样，输入：待采样的列、采样个数
@@ -51,21 +50,29 @@ def GetRangeBoundsWithSample(Samples, partition_nums, total_nums, col_nums):
 
 # 排序法：排序后精确获取分区边界
 # INPUTS: data 源数据、column 选作 Zorder 的列、partition_nums 分区数量
-# OUTPUT: 返回 partition_nums + 1 个边界值
+# OUTPUT: 返回 partition_nums - 1 个边界值
 def SortDataAndGetRangeBound(data, columns, partition_nums):
     #order_data = rankdata(data[column], method='ordinal') - 1
     col_nums = len(columns)
-    if partition_nums > data.shape[0]:
-        for i in range(col_nums):
-            range_bounds.append(data[columns[i]])
-        return range_bounds
+    total_nums = data.shape[0]
+    # 分区数量 > 数据量，则另分区数量 = 数据量
+    if partition_nums > total_nums:
+        partition_nums = total_nums
+    
     range_bounds = [[] for i in range(col_nums)]
+    
+    target = total_nums // partition_nums
     for c in range(col_nums):
-        order_data = pd.DataFrame()
+        RangeBounds = []
         order_data = data[columns[c]].sort_values()
-        partitions, RangeBounds = pd.qcut(order_data, q=partition_nums, retbins=True)
-        #print(partitions.value_counts())
-        RangeBounds = RangeBounds[1:len(RangeBounds)]
+        values = order_data.nunique()
+        # 基数是否小于 partition_nums
+        if values <= partition_nums:
+            RangeBounds = data[columns[c]].value_counts().index.tolist()
+            RangeBounds.sort()
+        else:
+            for i in range(partition_nums - 1):
+                RangeBounds.append(order_data.iloc[(i+1) * target - 1])
         range_bounds[c] = RangeBounds
     return range_bounds
 
@@ -80,36 +87,33 @@ def GetPartitionIDtoZorder(data, RangeBounds, Columns, zorderfile):
             num = data.loc[i, Columns[c]]
             id = bisect.bisect_left(RangeBounds[c], num)
             partitionIDs[i].append(id)    
-        zvalue = lb.interleavem(*partitionIDs[i])
-        """ if i % 100 == 0:
-            print(f'ID: {partitionIDs[i]}, zvalue:{zvalue}\n') """
+        # 单列的情况，直接用排序顺序作为 zvalue
+        if col_nums == 1:
+            zvalue = partitionIDs[i][0]
+        else:
+            zvalue = lb.interleavem(*partitionIDs[i])
         data.loc[i, "zvalue"] = zvalue
     data.to_csv(zorderfile, index=False, sep='|')
 
-def GetColumns():
+def GetColumns(i):
     is_zorder = False
     # Get the algorithm actions
-    with open('/home/ning/my_spark/share/CoWorkAlg/ColSelect.txt','r') as f:
+    with open('/home/ning/my_spark/share/CoWorkAlg/AllColumnShow.txt','r') as f:
         lines = f.readlines()
-        last_line = lines[-1]
-    ColSelect = eval(last_line)
-    # turn actions to the real columns
+        select_line = lines[i - 1]
+    action_array = eval(select_line)
+    with open('/home/ning/my_spark/share/CoWorkAlg/SkipFilesRes.pkl','rb') as f:
+        skip_files_res = pickle.load(f)
     ZorderCol = []
-    for i in range(len(ColSelect)):
-        if ColSelect[i] == 1:
-            ZorderCol.append(workload.orgin_col[i])
-    # Judge whether the columns has done zorder, if done, skip it
-    with open('/home/ning/zorder/GetZorder/ZorderColRes.pkl','rb') as f:
-        ZorderedCol = pickle.load(f)
-    if ZorderCol in ZorderedCol:
-        is_zorder = True
-        pass
-    else:
-        ZorderedCol.append(ZorderCol)
-        with open('/home/ning/zorder/GetZorder/ZorderColRes.pkl','wb') as f:
-            pickle.dump(ZorderedCol,f)
-    return is_zorder,ZorderCol
-    
+    for i in range(len(action_array)):
+            if action_array[i] == 1:
+                ZorderCol.append(workload.orgin_col[i])
+    Done = False
+    action_array = str(action_array)
+    if action_array in skip_files_res:
+        Done = True
+    return Done,ZorderCol
+
 if __name__ == "__main__":
     dir = '/home/ning/my_spark/share/tpch-for-spark/tpch_data_1/lineitem/'
     file = "lineitem"
@@ -124,7 +128,7 @@ if __name__ == "__main__":
 
     source_file = dir + file + ".csv"
     dest_file = dir + file + "_zvalued_data.csv"
-    zorder_file = dir + file + "_zorder.csv"
+    zvalue_file = dir + file + "_zvalue.csv"
     count_file = dir + file + "_count.csv"
 
     fast_interleave_bits_enabled = False
@@ -139,30 +143,33 @@ if __name__ == "__main__":
     partition_nums = 1000
     # 蓄水池采样点数量，从中选取分区边界
     sample_nums = partition_nums * 60
-    
-    # is_zorder,columns = GetColumns()
-    is_zorder = False
-    columns = ['l_orderkey', 'l_partkey']
-    if (is_zorder):
-        pass
-    else:
-        col_nums = len(columns)
-        #dataToZorder = data.loc[:, columns]
+    for i in range(1,16):
+        with open('/home/ning/my_spark/share/CoWorkAlg/count.pkl','wb') as f:
+            pickle.dump(i,f)
+        is_zorder,columns = GetColumns(i)
+        if is_zorder == True:
+            pass
+        else:
+            col_nums = len(columns)
+            #dataToZorder = data.loc[:, columns]
 
-        # 蓄水池采样
-        samples = ReservoirSample(data, columns, sample_nums)
-    
-        # 获取边界
-        #range_bounds = GetRangeBoundsWithSample(samples, partition_nums, total_nums, col_nums)
-        #print(f'sample: {range_bounds[0][0:100]}')
-        range_bounds = SortDataAndGetRangeBound(data, columns, partition_nums)
-        # print(f'order: {range_bounds[0][0:100]}')
-        # 获取每个数据的分区号，并计算 zvalue
-        zorder_file = dir + file + "_zorder.csv"
-        # if os.path.exists(zorder_file):
-        #     os.remove(zorder_file)
-        GetPartitionIDtoZorder(data, range_bounds, columns, zorder_file)
-        print('---------')
+            # 蓄水池采样
+            samples = ReservoirSample(data, columns, sample_nums)
+            
+            # 获取边界
+            range_bounds = GetRangeBoundsWithSample(samples, partition_nums, total_nums, col_nums)
+            # print(f'sample: {range_bounds[0][0:100]}')
+            range_bounds = SortDataAndGetRangeBound(data, columns, partition_nums)
+            # print(f'order: {range_bounds[0][0:100]}')
+
+            # 获取每个数据的分区号，并计算 zvalue
+            zorder_file = dir + file + "_zorder.csv"
+            print('GetPartitionIDtoZorder begin')
+            GetPartitionIDtoZorder(data, range_bounds, columns, zorder_file)
+            print('GetPartitionIDtoZorder end')
+
+        subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_sql.py'])
+
         # 统计生成的 zvalue 的个数
         """ data = pd.read_csv(zorder_file, sep=seperate)
         data.sort_values('zvalue', inplace=True)

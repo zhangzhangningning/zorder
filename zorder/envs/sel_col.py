@@ -22,6 +22,24 @@ class SelColEnv(gym.Env):
         self.SelCol = np.array([0] * self.length)
         self.idx = 0
         self.next_state = np.zeros(self.length)
+        self.rewards = {
+            "[1 0 0 0]":421,
+            "[0 1 0 0]":231,
+            "[0 0 1 0]":196,
+            "[0 0 0 1]":220,
+            "[1 1 0 0]":417,
+            "[1 0 1 0]":395,
+            "[1 0 0 1]":407,
+            "[0 1 1 0]":177,
+            "[0 1 0 1]":113,
+            "[0 0 1 1]":107,
+            "[1 1 1 0]":107,
+            "[1 1 0 1]":397,
+            "[1 0 1 1]":389,
+            "[0 1 1 1]":172,
+            "[1 1 1 1]":257,
+            "[0 0 0 0]":421,
+        }
         # action应该是选择的列，
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Dict(
@@ -44,14 +62,16 @@ class SelColEnv(gym.Env):
         if self.idx + 1 == len(self.ColShow):
             if np.all(self.SelCol == 0):
                 done = True
-                reward = self.get_reward('/home/ning/my_spark/share/CoWorkAlg/skip_files.txt')
+                reward = self.get_reward()
             else:
                 # 列选完了，该计算reward了，假设为1
                 self.save_col('/home/ning/my_spark/share/CoWorkAlg/ColSelect.txt')
                 # self.get_zfile()
+                # print('begin spark')
                 # self.execu_spark()
                 done = True
-                reward = self.get_reward('/home/ning/my_spark/share/CoWorkAlg/skip_files.txt')
+                reward = self.get_reward()
+            self.save_rewards('/home/ning/my_spark/share/CoWorkAlg/skip_files.txt',reward)
         else:
             done = False
             if action == 0:
@@ -59,7 +79,7 @@ class SelColEnv(gym.Env):
             else:
                 self.SelCol[self.idx] = 1
             self.idx += 1
-            self.next_state = np.zeros(self.length)
+            self.next_state = self.SelCol.copy()
             self.next_state[self.idx] = 1
             reward = 0
             # observation = self._get_obs()
@@ -70,22 +90,26 @@ class SelColEnv(gym.Env):
         return {"next_col":self.next_state,"workload":self.workload}
 
     def save_col(self,filename):
+        # self.SelCol = [0,1,1,0]
         col_string = np.array2string(self.SelCol,separator= ',')
         with open (filename,'a') as f:
             f.write(col_string)
         with open (filename, 'a') as f:
             f.write('\n')
     
-    def get_reward(self,filename):
-        with open(filename,'r') as f:
-            lines = f.readlines()
-            last_line = lines[-1]
-        reward = int(last_line)
-        return reward
-    def execu_spark(self):
-        # cmd = "cd / && spark-submit /home/ning/my_spark/share/CoWorkAlg/execu_query.py"
-        subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_query.py'])
+    def get_reward(self):
+        Sel_Col = str(self.SelCol)
+        return self.rewards[Sel_Col]
     
-    def get_zfile(self):
-        os.system('python /home/ning/zorder/GetZorder/GetZFile.py')
+    def save_rewards(self,filename,reward):
+        with open(filename,'a') as f:
+            reward = str(reward)
+            f.write(reward)
+            f.write('\n')
+    # def execu_spark(self):
+    #     # cmd = "cd / && spark-submit /home/ning/my_spark/share/CoWorkAlg/execu_query.py"
+    #     subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_query.py'])
+    
+    # def get_zfile(self):
+    #     os.system('python /home/ning/zorder/GetZorder/zorder.py')
 
