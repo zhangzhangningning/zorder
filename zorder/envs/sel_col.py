@@ -4,48 +4,44 @@ from gym import spaces
 # import pygame
 import numpy as np
 import subprocess
+import random
+import shutil
 
 
 class SelColEnv(gym.Env):
-    metadata = {'render.modes': ['human']}
+    # metadata = {'render.modes': ['human']}
 
     def __init__(self):  # params
         # table涉及的列传入进来，0表示workload不涉及该列，1表示workload涉及该列
         # 比如（1,1,1）workload涉及表中的三列
         # self.aaa = params['']
-        ColShow = (1,1,1,1)
-        workload = (2,2,1,1,2)
+        ColShow = [1] * 7
+        # workload = [1, 1, 2, 1, 1, 3, 2, 1, 5, 4, 10, 4, 2, 1, 3, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 4, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 3, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1]
+        workload = [13, 25, 17, 20, 15, 10]
+        self.rand_num = 0
+        self.best_reward = 0
+        self.best_actions = []
+        self.define_col_num = 6
+        self.parent_path = '/home/ning/zorder/Actions_Rewards/'
+        self.mkfile()
+        self.done_col_reward = {}
         self.ColShow = np.array(ColShow)
         self.workload = np.array(workload)
+        self.workload_length = len(self.workload)
         # 用来最后计算reward的
         self.length = len(self.ColShow)
         self.SelCol = np.array([0] * self.length)
         self.idx = 0
         self.next_state = np.zeros(self.length)
-        self.rewards = {
-            "[1 0 0 0]":421,
-            "[0 1 0 0]":231,
-            "[0 0 1 0]":196,
-            "[0 0 0 1]":220,
-            "[1 1 0 0]":417,
-            "[1 0 1 0]":395,
-            "[1 0 0 1]":407,
-            "[0 1 1 0]":177,
-            "[0 1 0 1]":113,
-            "[0 0 1 1]":107,
-            "[1 1 1 0]":107,
-            "[1 1 0 1]":397,
-            "[1 0 1 1]":389,
-            "[0 1 1 1]":172,
-            "[1 1 1 1]":257,
-            "[0 0 0 0]":421,
-        }
         # action应该是选择的列，
         self.action_space = spaces.Discrete(2)
+        # self.action_space = np.array()
+        # self.observation_space = spaces.Box(low = 0, high = 1, shape = (self.length,))
+
         self.observation_space = spaces.Dict(
             {
                 "next_col": spaces.Box(low = 0, high = 1, shape = (self.length,), dtype = int),
-                "workload": spaces.Box(low = 0, high = 10, shape=(5,), dtype = int),
+                # "workload": spaces.Box(low = 0, high = 100, shape=(self.workload_length,), dtype = int),
             }
         )
 
@@ -54,25 +50,44 @@ class SelColEnv(gym.Env):
         self.idx = 0
         self.SelCol = np.array([0]*self.length)
         self.next_state = np.zeros(self.length)
-        self.next_state[self.idx + 1] = 1
+        self.next_state[self.idx] = 1
         observation = self._get_obs()
+        # observation = self.next_state
         return observation
 
     def step(self, action):
         if self.idx + 1 == len(self.ColShow):
-            if np.all(self.SelCol == 0):
-                done = True
-                reward = self.get_reward()
+            done = True
+            if (self.SelCol.any() == 0):
+                reward = 0
+                self.save_col('/home/ning/zorder/Actions_Rewards/Select_cols.txt')
             else:
-                # 列选完了，该计算reward了，假设为1
-                self.save_col('/home/ning/my_spark/share/CoWorkAlg/ColSelect.txt')
-                # self.get_zfile()
-                # print('begin spark')
-                # self.execu_spark()
-                done = True
-                reward = self.get_reward()
-            self.save_rewards('/home/ning/my_spark/share/CoWorkAlg/skip_files.txt',reward)
+                # select_cols_num = np.count_nonzero(self.SelCol == 1)
+                while (np.count_nonzero(self.SelCol == 1) < self.define_col_num):
+                    self.rand_num = random.randint(0,100)
+                    self.SelCol[self.rand_num % len(self.ColShow)] = 1
+                while (np.count_nonzero(self.SelCol == 1) > self.define_col_num):
+                    self.rand_num = random.randint(0,100)
+                    self.SelCol[self.rand_num % len(self.ColShow)] = 0
+                self.save_col('/home/ning/zorder/Actions_Rewards/Select_cols.txt')
+                if str(self.SelCol) in self.done_col_reward.keys():
+                    reward = self.done_col_reward[str(self.SelCol)]
+                else:
+                    self.execu_sql()
+                    reward = self.Get_reward()
+                    self.done_col_reward[str(self.SelCol)] = reward
+                reward = str(reward)
+                reward = reward.strip('\n')
+                reward = float(reward)
+                if reward > self.best_reward:
+                    self.best_reward = reward
+                    self.best_actions = self.SelCol.copy()
+            self.save_rewards('/home/ning/zorder/Actions_Rewards/rewards.txt',reward)
         else:
+            if self.best_reward > 0:
+                self.rand_num = random.randint(0,10)
+                if self.rand_num > 2:
+                    action = self.best_actions[self.idx]
             done = False
             if action == 0:
                 self.SelCol[self.idx] = 0
@@ -81,13 +96,17 @@ class SelColEnv(gym.Env):
             self.idx += 1
             self.next_state = self.SelCol.copy()
             self.next_state[self.idx] = 1
-            reward = 0
-            # observation = self._get_obs()
-            # info = {}
+            reward = -1
+        reward = float(reward)
+        if reward == self.best_reward:
+            reward = reward * 100
         return self._get_obs(), reward, done ,{}
+        # return self.next_state, reward, done ,{} 
 
     def _get_obs(self):
-        return {"next_col":self.next_state,"workload":self.workload}
+        return {"next_col":self.next_state}
+        # return {"next_col":self.next_state,"workload":self.workload}
+        # return self.next_state
 
     def save_col(self,filename):
         # self.SelCol = [0,1,1,0]
@@ -97,19 +116,44 @@ class SelColEnv(gym.Env):
         with open (filename, 'a') as f:
             f.write('\n')
     
-    def get_reward(self):
-        Sel_Col = str(self.SelCol)
-        return self.rewards[Sel_Col]
+    # def get_reward(self):
+    #     Sel_Col = str(self.SelCol)
+    #     return self.rewards[Sel_Col]
     
     def save_rewards(self,filename,reward):
+        reward = str(reward)
+        reward = reward.strip('\n')
         with open(filename,'a') as f:
-            reward = str(reward)
             f.write(reward)
             f.write('\n')
+
+
     # def execu_spark(self):
     #     # cmd = "cd / && spark-submit /home/ning/my_spark/share/CoWorkAlg/execu_query.py"
     #     subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_query.py'])
-    
-    # def get_zfile(self):
-    #     os.system('python /home/ning/zorder/GetZorder/zorder.py')
+    def Get_reward(self):
+        with open('/home/ning/zorder/Actions_Rewards/workload_erows_ratio.txt','r') as f:
+            lines = f.readlines()
+        reward = lines[-1]
+        return reward
+    def execu_sql(self):
+        os.system('/bin/python3 /home/ning/zorder/Cardinality_Estimation_pg/Gen_workload.py')
 
+    def Get_Single_min_ratio(self):
+        with open('/home/ning/zorder/Actions_Rewards/single_min_select_ratio.txt','r') as f:
+            lines = f.readlines()
+        reward = lines[-1]
+        return reward
+    def mkfile(self):
+        open(self.parent_path + '/' + 'rewards.txt','w')
+        open(self.parent_path + '/' + 'Select_cols.txt','w')
+        open(self.parent_path + '/' + 'workload_erows_ratio.txt','w')
+        self.dir_path = self.parent_path + str(self.define_col_num)
+        folder = os.path.exists(self.dir_path)
+        if folder:
+            shutil.rmtree(self.dir_path)
+        os.mkdir(self.dir_path)
+        # open(self.dir_path + '/' + 'rewards.txt','w')
+        # open(self.dir_path + '/' + 'Select_cols.txt','w')
+        # open(self.dir_path + '/' + 'workload_erows_ratio.txt','w')
+        # return self.dir_path
