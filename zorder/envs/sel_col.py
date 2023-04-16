@@ -6,6 +6,7 @@ import numpy as np
 import subprocess
 import random
 import shutil
+import pickle
 
 
 class SelColEnv(gym.Env):
@@ -21,9 +22,9 @@ class SelColEnv(gym.Env):
         self.rand_num = 0
         self.best_reward = 0
         self.best_actions = []
-        self.define_col_num = 6
-        self.parent_path = '/home/ning/zorder/Actions_Rewards/'
-        self.mkfile()
+        # self.define_col_num = 6
+        # self.parent_path = '/home/ning/zorder/Actions_Rewards/'
+        # self.mkfile()
         self.done_col_reward = {}
         self.ColShow = np.array(ColShow)
         self.workload = np.array(workload)
@@ -59,30 +60,35 @@ class SelColEnv(gym.Env):
         if self.idx + 1 == len(self.ColShow):
             done = True
             if (self.SelCol.any() == 0):
-                reward = 0
-                self.save_col('/home/ning/zorder/Actions_Rewards/Select_cols.txt')
+                reward = -10
+                self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
             else:
                 # select_cols_num = np.count_nonzero(self.SelCol == 1)
-                while (np.count_nonzero(self.SelCol == 1) < self.define_col_num):
-                    self.rand_num = random.randint(0,100)
-                    self.SelCol[self.rand_num % len(self.ColShow)] = 1
-                while (np.count_nonzero(self.SelCol == 1) > self.define_col_num):
-                    self.rand_num = random.randint(0,100)
-                    self.SelCol[self.rand_num % len(self.ColShow)] = 0
-                self.save_col('/home/ning/zorder/Actions_Rewards/Select_cols.txt')
+                # while (np.count_nonzero(self.SelCol == 1) < self.define_col_num):
+                #     self.rand_num = random.randint(0,100)
+                #     self.SelCol[self.rand_num % len(self.ColShow)] = 1
+                # while (np.count_nonzero(self.SelCol == 1) > self.define_col_num):
+                #     self.rand_num = random.randint(0,100)
+                #     self.SelCol[self.rand_num % len(self.ColShow)] = 0
+                self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
+                self.done_col_reward = self.Get_done_reward()
                 if str(self.SelCol) in self.done_col_reward.keys():
                     reward = self.done_col_reward[str(self.SelCol)]
                 else:
                     self.execu_sql()
                     reward = self.Get_reward()
-                    self.done_col_reward[str(self.SelCol)] = reward
+                    if str(self.SelCol) in self.done_col_reward.keys():
+                        pass
+                    else:
+                        self.done_col_reward[str(self.SelCol)] = reward
+                    self.save_done_reward()
                 reward = str(reward)
                 reward = reward.strip('\n')
                 reward = float(reward)
                 if reward > self.best_reward:
                     self.best_reward = reward
                     self.best_actions = self.SelCol.copy()
-            self.save_rewards('/home/ning/zorder/Actions_Rewards/rewards.txt',reward)
+            self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
         else:
             if self.best_reward > 0:
                 self.rand_num = random.randint(0,10)
@@ -96,10 +102,13 @@ class SelColEnv(gym.Env):
             self.idx += 1
             self.next_state = self.SelCol.copy()
             self.next_state[self.idx] = 1
-            reward = -1
+            reward = -11
         reward = float(reward)
         if reward == self.best_reward:
-            reward = reward * 100
+            print(reward)
+            print(self.best_actions)
+            reward = -reward
+            reward = reward * 10
         return self._get_obs(), reward, done ,{}
         # return self.next_state, reward, done ,{} 
 
@@ -132,12 +141,12 @@ class SelColEnv(gym.Env):
     #     # cmd = "cd / && spark-submit /home/ning/my_spark/share/CoWorkAlg/execu_query.py"
     #     subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_query.py'])
     def Get_reward(self):
-        with open('/home/ning/zorder/Actions_Rewards/workload_erows_ratio.txt','r') as f:
+        with open('/home/ning/zorder/ML_GetFiles/done_reward.txt','r') as f:
             lines = f.readlines()
         reward = lines[-1]
         return reward
     def execu_sql(self):
-        os.system('/bin/python3 /home/ning/zorder/Cardinality_Estimation_pg/Gen_workload.py')
+        os.system('/bin/python3 /home/ning/zorder/ML_GetFiles/countPredicateFiles2.py')
 
     def Get_Single_min_ratio(self):
         with open('/home/ning/zorder/Actions_Rewards/single_min_select_ratio.txt','r') as f:
@@ -157,3 +166,10 @@ class SelColEnv(gym.Env):
         # open(self.dir_path + '/' + 'Select_cols.txt','w')
         # open(self.dir_path + '/' + 'workload_erows_ratio.txt','w')
         # return self.dir_path
+    def save_done_reward(self):
+        with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','wb') as f:
+            pickle.dump(self.done_col_reward,f)
+    def Get_done_reward(self):
+        with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','rb') as f:
+            self.done_col_reward = pickle.load(f)
+            return self.done_col_reward

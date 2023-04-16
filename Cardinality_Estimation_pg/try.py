@@ -19,7 +19,11 @@ import re
 # str2 = 'ningzhang'
 # print(str1 + str2)
 
-import random
-for i in range (10):
-    action = random.randint(0,1)
-    print(action)
+# import random
+# for i in range (10):
+#     action = random.randint(0,1)
+#     print(action)
+import re
+s = 'saddssss112234'
+s = re.sub(r'[0-9]','*',s)
+print(s)
