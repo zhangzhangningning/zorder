@@ -20,7 +20,7 @@ class SelColEnv(gym.Env):
         # workload = [1, 1, 2, 1, 1, 3, 2, 1, 5, 4, 10, 4, 2, 1, 3, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 4, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 3, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1]
         workload = [13, 25, 17, 20, 15, 10]
         self.rand_num = 0
-        self.best_reward = 0
+        self.best_reward = -10
         self.best_actions = []
         # self.define_col_num = 6
         # self.parent_path = '/home/ning/zorder/Actions_Rewards/'
@@ -90,7 +90,7 @@ class SelColEnv(gym.Env):
                     self.best_actions = self.SelCol.copy()
             self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
         else:
-            if self.best_reward > 0:
+            if self.best_reward > -10:
                 self.rand_num = random.randint(0,10)
                 if self.rand_num > 2:
                     action = self.best_actions[self.idx]
@@ -108,7 +108,6 @@ class SelColEnv(gym.Env):
             print(reward)
             print(self.best_actions)
             reward = -reward
-            reward = reward * 10
         return self._get_obs(), reward, done ,{}
         # return self.next_state, reward, done ,{} 
 

@@ -9,4 +9,13 @@ for i in range(length):
         pass
     else:
         case.append(orgin_lines[i])
+
+import numpy
+
+aa = numpy.array(case)
+aa.sort()
+# bb = aa.tolist()
+print(aa)
+# print(min(bb))
+# print(case)
 print(len(case))

@@ -1,14 +1,14 @@
 
-with open('/home/ning/zorder/Actions_Rewards/rewards.txt','r') as f:
-    orgin_lines = f.readlines()
-length = len(orgin_lines)
+# with open('/home/ning/zorder/Actions_Rewards/rewards.txt','r') as f:
+#     orgin_lines = f.readlines()
+# length = len(orgin_lines)
 
-with open('/home/ning/zorder/Actions_Rewards/finnal_reward.txt', 'w') as f:
-    f.write("")
-with open('/home/ning/zorder/Actions_Rewards/finnal_reward.txt', 'a') as f:
-    for i in range (length):
-        line = str(i) + " " + str(orgin_lines[i])
-        f.write(line)
+# with open('/home/ning/zorder/Actions_Rewards/finnal_reward.txt', 'w') as f:
+#     f.write("")
+# with open('/home/ning/zorder/Actions_Rewards/finnal_reward.txt', 'a') as f:
+#     for i in range (length):
+#         line = str(i) + " " + str(orgin_lines[i])
+#         f.write(line)
 
 
 import matplotlib.pyplot as plt
@@ -31,7 +31,7 @@ plt.plot(x, y1, label='A2C')
 # plt.plot(x, y2, label='A2C')
 plt.xlabel('epsoide')
 plt.ylabel('Reward')
-plt.title('5-14-B-7028-4min')
+plt.title('5-14-B-7233-4min')
 plt.legend()
 plt.show()
 plt.savefig('/home/ning/zorder/Actions_Rewards/plot.png')
