@@ -25,6 +25,7 @@ class SelColEnv(gym.Env):
         # self.define_col_num = 6
         # self.parent_path = '/home/ning/zorder/Actions_Rewards/'
         # self.mkfile()
+        self.init_reward_selected_cols()
         self.done_col_reward = {}
         self.ColShow = np.array(ColShow)
         self.workload = np.array(workload)
@@ -75,7 +76,7 @@ class SelColEnv(gym.Env):
                 if str(self.SelCol) in self.done_col_reward.keys():
                     reward = self.done_col_reward[str(self.SelCol)]
                 else:
-                    self.execu_sql()
+                    self.execu_predicted_files()
                     reward = self.Get_reward()
                     if str(self.SelCol) in self.done_col_reward.keys():
                         pass
@@ -85,15 +86,15 @@ class SelColEnv(gym.Env):
                 reward = str(reward)
                 reward = reward.strip('\n')
                 reward = float(reward)
-                if reward > self.best_reward:
-                    self.best_reward = reward
-                    self.best_actions = self.SelCol.copy()
+                # if reward > self.best_reward:
+                #     self.best_reward = reward
+                #     self.best_actions = self.SelCol.copy()
             self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
         else:
-            if self.best_reward > -10:
-                self.rand_num = random.randint(0,10)
-                if self.rand_num > 2:
-                    action = self.best_actions[self.idx]
+            # if self.best_reward > -10:
+            #     self.rand_num = random.randint(0,100)
+            #     if self.rand_num > 95:
+            #         action = self.best_actions[self.idx]
             done = False
             if action == 0:
                 self.SelCol[self.idx] = 0
@@ -104,10 +105,10 @@ class SelColEnv(gym.Env):
             self.next_state[self.idx] = 1
             reward = -11
         reward = float(reward)
-        if reward == self.best_reward:
-            print(reward)
-            print(self.best_actions)
-            reward = -reward
+        # if reward == self.best_reward:
+        #     # print(reward)
+        #     # print(self.best_actions)
+        #     reward = -reward
         return self._get_obs(), reward, done ,{}
         # return self.next_state, reward, done ,{} 
 
@@ -144,7 +145,7 @@ class SelColEnv(gym.Env):
             lines = f.readlines()
         reward = lines[-1]
         return reward
-    def execu_sql(self):
+    def execu_predicted_files(self):
         os.system('/bin/python3 /home/ning/zorder/ML_GetFiles/countPredicateFiles2.py')
 
     def Get_Single_min_ratio(self):
@@ -172,3 +173,8 @@ class SelColEnv(gym.Env):
         with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','rb') as f:
             self.done_col_reward = pickle.load(f)
             return self.done_col_reward
+    def init_reward_selected_cols(self):
+        with open('/home/ning/zorder/ML_GetFiles/reward.txt','w') as f:
+            f.write('')
+        with open('/home/ning/zorder/ML_GetFiles/selected_cols.txt','w') as f:
+            f.write('')

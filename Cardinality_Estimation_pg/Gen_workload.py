@@ -196,8 +196,11 @@ def GetSingleDimSelectRatio(PredictCombin):
     conn.commit()
     conn.close()
 
+    sorted_list = sorted(single_col_select_ratio.items(),key=lambda x:x[1])
+    print(sorted_list)
+
     # print(single_col_select_ratio)
-    key = max(single_col_select_ratio.keys(),key=lambda x:single_col_select_ratio[x])
+    key = min(single_col_select_ratio.keys(),key=lambda x:single_col_select_ratio[x])
     print(key)
     single_cols_max_erows_ratio = single_col_select_ratio[key]
     single_cols_min_erows_ratio = 1 - single_cols_max_erows_ratio
@@ -337,8 +340,8 @@ if __name__ == "__main__":
     #     sql = '"' + i + '"' +','
     #     print(sql)
 
-    # single_cols_min_erows_ratio = GetSingleDimSelectRatio(PredictCombin)
-    # WriteSignleMinSelectRatio(str(single_cols_min_erows_ratio))
+    single_cols_min_erows_ratio = GetSingleDimSelectRatio(PredictCombin)
+    WriteSignleMinSelectRatio(str(single_cols_min_erows_ratio))
     # select_cols = GetSelectCols()
     # sql_based_select_cols = GetSQLBasedSelectCols(PredictCombin,select_cols)
     # workload_erows_ratio = GetWorkloadErowsRatio(sql_based_select_cols,sql_nums)
@@ -347,7 +350,7 @@ if __name__ == "__main__":
     # workload = GetSQLBasedPredicts(PredictCombin)
     # workload = GetWorkloadInput(PredictCombin)
     # GetWorkloadErowsRatio(,sql_nums)
-    GetEachSQLErowsRatio(PredictCombin)
+    # GetEachSQLErowsRatio(PredictCombin)
 
 
 
