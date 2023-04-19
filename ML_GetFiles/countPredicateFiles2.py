@@ -10,6 +10,7 @@ import os
 import random
 from pandas.core.frame import DataFrame
 from sklearn.cluster import DBSCAN, OPTICS, AgglomerativeClustering, Birch, FeatureAgglomeration, MeanShift, estimate_bandwidth
+import sys
 # 蓄水池采样，输入：待采样的列、采样个数
 # 返回：对应的列的采样数据，作为分区边界
 
@@ -356,7 +357,7 @@ def GetSQLBasedSelectCols(PredictCombin,select_cols):
     # return new_sqls_based_select_cols
 
 def GetActionArray():
-    with open('/home/ning/zorder/Actions_Rewards/Select_cols.txt','r') as f:
+    with open('/home/ning/zorder/ML_GetFiles/selected_cols.txt','r') as f:
         lines = f.readlines()
         action_array = lines[-1]
     return action_array
@@ -371,6 +372,11 @@ def WriteRewards(predicte_files):
     with open('/home/ning/zorder/ML_GetFiles/done_reward.txt','a') as f:
         final_reward = math.log(eval(str(predict_files)))
         final_reward = -final_reward
+        f.write(str(final_reward))
+        f.write('\n')
+def WriteerrorRewards():
+    with open('/home/ning/zorder/ML_GetFiles/done_reward.txt','a') as f:
+        final_reward = -9
         f.write(str(final_reward))
         f.write('\n')
 
@@ -506,6 +512,7 @@ if __name__ == "__main__":
         Distances = [284.3265491314493, 792.0978793239323, 1077.54020607677, 1274.759977263888, 1430.2722577343843, 1554.2718279301532, 1707.320718682262, 1852.312872150045]
         # Distances = [284.3265491314493, 792.0978793239323, 1077.54020607677, 1274.759977263888, 1430.2722577343843, 1554.2718279301532, 1707.320718682262]
         total_files_nums = 0
+        
         for i in range(len(predicates)):
             
             #if(i == 0):
@@ -545,7 +552,13 @@ if __name__ == "__main__":
             
             #bandwith = estimate_bandwidth(arr, quantile=1)
             #print(bandwith)
-            clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=Distance).fit(arr)
+            try:
+                clustering = AgglomerativeClustering(n_clusters=None, distance_threshold=Distance).fit(arr)
+                pre_clustering = clustering
+            except:
+                # WriteerrorRewards()
+                # sys.exit(1)
+                clustering = pre_clustering
             #clustering = MeanShift(bandwidth=Distance).fit(arr)
             #print(clustering)
             unique, counts = np.unique(clustering.labels_, return_counts=True)
@@ -554,7 +567,11 @@ if __name__ == "__main__":
             # print(f"numbers in this file:, {counts}\n")
 
             total_predicated = selectivities[i]
-            predict_files = total_predicated / predicated_data.shape[0] * len(unique) 
+            try:
+                predict_files = total_predicated / predicated_data.shape[0] * len(unique) 
+                pre_predict_files = predict_files
+            except:
+                predict_files = pre_predict_files
             # print(f'predicted files: {predict_files}')
             total_files_nums += predict_files
         WriteRewards(total_files_nums)

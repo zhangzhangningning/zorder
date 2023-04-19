@@ -1,5 +1,5 @@
 
-with open('/home/ning/zorder/ML_GetFiles/reward.txt','r') as f:
+with open('/home/ning/zorder/ML_GetFiles/reward1.0.txt','r') as f:
     orgin_lines = f.readlines()
 length = len(orgin_lines)
 
@@ -32,7 +32,7 @@ plt.plot(x, y1, label='A2C')
 # plt.plot(x, y2, label='A2C')
 plt.xlabel('epsoide')
 plt.ylabel('Reward')
-plt.title('32-7286-4min')
+plt.title('63-7395-1h40min')
 plt.legend()
 plt.show()
 plt.savefig('/home/ning/zorder/ML_GetFiles/plot.png')

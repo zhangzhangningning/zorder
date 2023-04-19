@@ -7,6 +7,7 @@ import subprocess
 import random
 import shutil
 import pickle
+import time
 
 
 class SelColEnv(gym.Env):
@@ -86,15 +87,15 @@ class SelColEnv(gym.Env):
                 reward = str(reward)
                 reward = reward.strip('\n')
                 reward = float(reward)
-                # if reward > self.best_reward:
-                #     self.best_reward = reward
-                #     self.best_actions = self.SelCol.copy()
+                if reward > self.best_reward:
+                    self.best_reward = reward
+                    self.best_actions = self.SelCol.copy()
             self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
         else:
-            # if self.best_reward > -10:
-            #     self.rand_num = random.randint(0,100)
-            #     if self.rand_num > 95:
-            #         action = self.best_actions[self.idx]
+            if self.best_reward > -10:
+                self.rand_num = random.randint(0,10)
+                if self.rand_num > 7:
+                    action = self.best_actions[self.idx]
             done = False
             if action == 0:
                 self.SelCol[self.idx] = 0
@@ -105,10 +106,10 @@ class SelColEnv(gym.Env):
             self.next_state[self.idx] = 1
             reward = -11
         reward = float(reward)
-        # if reward == self.best_reward:
-        #     # print(reward)
-        #     # print(self.best_actions)
-        #     reward = -reward
+        if reward == self.best_reward:
+            # print(reward)
+            # print(self.best_actions)
+            reward = -reward
         return self._get_obs(), reward, done ,{}
         # return self.next_state, reward, done ,{} 
 
@@ -134,6 +135,8 @@ class SelColEnv(gym.Env):
         reward = reward.strip('\n')
         with open(filename,'a') as f:
             f.write(reward)
+            f.write(" ")
+            f.write(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time())))
             f.write('\n')
 
 
