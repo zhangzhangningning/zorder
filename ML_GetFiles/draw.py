@@ -1,5 +1,17 @@
 
-with open('/home/ning/zorder/ML_GetFiles/reward1.0.txt','r') as f:
+with open('/home/ning/zorder/ML_GetFiles/reward.txt','r') as f:
+    orgin_lines = f.readlines()
+length = len(orgin_lines)
+
+with open('/home/ning/zorder/ML_GetFiles/count_reward.txt','w') as f:
+    f.write('')
+
+with open('/home/ning/zorder/ML_GetFiles/count_reward.txt','a') as f:
+    for i in range(length):
+        reward = orgin_lines[i].split()
+        reward = reward[0] + '\n'
+        f.write(reward)
+with open('/home/ning/zorder/ML_GetFiles/count_reward.txt','r') as f:
     orgin_lines = f.readlines()
 length = len(orgin_lines)
 
@@ -7,9 +19,10 @@ with open('/home/ning/zorder/ML_GetFiles/finnal_reward.txt', 'w') as f:
     f.write("")
 with open('/home/ning/zorder/ML_GetFiles/finnal_reward.txt', 'a') as f:
     for i in range (length):
-        if (eval(orgin_lines[i]) != 0):
-            line = str(i) + " " + str(orgin_lines[i])
-            f.write(line)
+        reward = orgin_lines[i].split()
+        reward = reward[0]
+        line = str(i) + " " + str(reward) +'\n'
+        f.writelines(line)
 
 
 import matplotlib.pyplot as plt
@@ -32,7 +45,7 @@ plt.plot(x, y1, label='A2C')
 # plt.plot(x, y2, label='A2C')
 plt.xlabel('epsoide')
 plt.ylabel('Reward')
-plt.title('63-7395-1h40min')
+plt.title('110-7395-3h')
 plt.legend()
 plt.show()
 plt.savefig('/home/ning/zorder/ML_GetFiles/plot.png')

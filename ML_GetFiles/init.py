@@ -13,18 +13,18 @@ import pickle
 
 # del result[str('[0 1 1 0 1 1 0]')]
 
-# with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','wb') as f:
-#     pickle.dump({},f)
-# #     pickle.dump(result,f)
+with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','wb') as f:
+    pickle.dump({},f)
+#     pickle.dump(result,f)
 
-with open('/home/ning/zorder/ML_GetFiles/done_epsiode1.pkl','rb') as f:
+with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','rb') as f:
     # pickle.dump({},f)
     result = pickle.load(f)
 # print(result)
 print(len(result))
 
-for i, j in result.items():
-    print(i,j)
+# for i, j in result.items():
+#     print(i,j)
 
 # print(type(result))
 # # reward =result.values()
