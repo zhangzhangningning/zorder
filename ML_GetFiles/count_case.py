@@ -1,4 +1,4 @@
-with open('/home/ning/zorder/ML_GetFiles/selected_cols.txt','r') as f:
+with open('/home/ning/zorder/ML_GetFiles/count_reward.txt','r') as f:
     orgin_lines = f.readlines()
 length = len(orgin_lines)
 

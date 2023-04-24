@@ -72,29 +72,41 @@ class SelColEnv(gym.Env):
                 # while (np.count_nonzero(self.SelCol == 1) > self.define_col_num):
                 #     self.rand_num = random.randint(0,100)
                 #     self.SelCol[self.rand_num % len(self.ColShow)] = 0
-                self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
                 self.done_col_reward = self.Get_done_reward()
-                if str(self.SelCol) in self.done_col_reward.keys():
-                    reward = self.done_col_reward[str(self.SelCol)]
+                if self.done_col_reward:
+                    self.best_actions,self.best_reward = self.Get_best_reward_action()
+                cases = len(self.done_col_reward)
+                if cases >= 110:
+                    self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
+                    if str(self.SelCol) in self.done_col_reward.keys():
+                        reward = self.done_col_reward[str(self.SelCol)]
+                    else:
+                        self.execu_predicted_files()
+                        reward = self.Get_reward()
                 else:
+                    while str(self.SelCol) in self.done_col_reward.keys():
+                        random1 = np.random.randint(0,100)
+                        random2 = np.random.randint(0,100)
+                        self.SelCol[random1 % self.length] = random2 % 2
+                    self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
                     self.execu_predicted_files()
                     reward = self.Get_reward()
                     if str(self.SelCol) in self.done_col_reward.keys():
-                        pass
+                            pass
                     else:
                         self.done_col_reward[str(self.SelCol)] = reward
-                    self.save_done_reward()
+                self.save_done_reward()      
                 reward = str(reward)
                 reward = reward.strip('\n')
                 reward = float(reward)
-                if reward > self.best_reward:
+                if reward > float(self.best_reward):
                     self.best_reward = reward
                     self.best_actions = self.SelCol.copy()
             self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
         else:
             if self.best_reward > -10:
                 self.rand_num = random.randint(0,10)
-                if self.rand_num > 7:
+                if self.rand_num > 3:
                     action = self.best_actions[self.idx]
             done = False
             if action == 0:
@@ -181,3 +193,18 @@ class SelColEnv(gym.Env):
             f.write('')
         with open('/home/ning/zorder/ML_GetFiles/selected_cols.txt','w') as f:
             f.write('')
+    def Get_best_reward_action(self):
+        done_col_reward = list(self.done_col_reward.items())
+        best_action = done_col_reward[0][0]
+        best_reward = float(str(done_col_reward[0][1]).strip('\n'))
+        for i in range(len(done_col_reward)):
+            temp_reward = float(str(done_col_reward[i][1]).strip('\n'))
+            if temp_reward > best_reward:
+                best_reward = temp_reward
+                best_action = done_col_reward[i][0]
+        best_action = ','.join(str(best_action).split())
+        best_action = eval(best_action)
+        best_action = np.array(best_action)
+        print(type(best_action))
+        print(best_reward)
+        return best_action,best_reward
