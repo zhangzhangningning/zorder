@@ -17,11 +17,11 @@ class SelColEnv(gym.Env):
         # table涉及的列传入进来，0表示workload不涉及该列，1表示workload涉及该列
         # 比如（1,1,1）workload涉及表中的三列
         # self.aaa = params['']
-        ColShow = [1] * 7
+        ColShow = [1] * 11
         # workload = [1, 1, 2, 1, 1, 3, 2, 1, 5, 4, 10, 4, 2, 1, 3, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 4, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 3, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1]
         workload = [13, 25, 17, 20, 15, 10]
         self.rand_num = 0
-        self.best_reward = -10
+        self.best_reward = -100
         self.best_actions = []
         # self.define_col_num = 6
         # self.parent_path = '/home/ning/zorder/Actions_Rewards/'
@@ -62,8 +62,8 @@ class SelColEnv(gym.Env):
         if self.idx + 1 == len(self.ColShow):
             done = True
             if (self.SelCol.any() == 0):
-                reward = -10
-                self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
+                reward = -100
+                self.save_col('/home/ning/zorder/New_agg_result/select_cols.txt')
             else:
                 # select_cols_num = np.count_nonzero(self.SelCol == 1)
                 # while (np.count_nonzero(self.SelCol == 1) < self.define_col_num):
@@ -76,19 +76,23 @@ class SelColEnv(gym.Env):
                 if self.done_col_reward:
                     self.best_actions,self.best_reward = self.Get_best_reward_action()
                 cases = len(self.done_col_reward)
-                if cases >= 110:
-                    self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
+                if cases >= 1:
+                    self.save_col('/home/ning/zorder/New_agg_result/select_cols.txt')
                     if str(self.SelCol) in self.done_col_reward.keys():
                         reward = self.done_col_reward[str(self.SelCol)]
                     else:
                         self.execu_predicted_files()
                         reward = self.Get_reward()
+                        if str(self.SelCol) in self.done_col_reward.keys():
+                            pass
+                        else:
+                            self.done_col_reward[str(self.SelCol)] = reward
                 else:
                     while str(self.SelCol) in self.done_col_reward.keys():
                         random1 = np.random.randint(0,100)
                         random2 = np.random.randint(0,100)
                         self.SelCol[random1 % self.length] = random2 % 2
-                    self.save_col('/home/ning/zorder/ML_GetFiles/selected_cols.txt')
+                    self.save_col('/home/ning/zorder/New_agg_result/select_cols.txt')
                     self.execu_predicted_files()
                     reward = self.Get_reward()
                     if str(self.SelCol) in self.done_col_reward.keys():
@@ -102,9 +106,9 @@ class SelColEnv(gym.Env):
                 if reward > float(self.best_reward):
                     self.best_reward = reward
                     self.best_actions = self.SelCol.copy()
-            self.save_rewards('/home/ning/zorder/ML_GetFiles/reward.txt',reward)
+            self.save_rewards('/home/ning/zorder/New_agg_result/reward.txt',reward)
         else:
-            if self.best_reward > -10:
+            if self.best_reward > -100:
                 self.rand_num = random.randint(0,10)
                 if self.rand_num > 3:
                     action = self.best_actions[self.idx]
@@ -116,7 +120,7 @@ class SelColEnv(gym.Env):
             self.idx += 1
             self.next_state = self.SelCol.copy()
             self.next_state[self.idx] = 1
-            reward = -11
+            reward = -110
         reward = float(reward)
         if reward == self.best_reward:
             # print(reward)
@@ -156,12 +160,15 @@ class SelColEnv(gym.Env):
     #     # cmd = "cd / && spark-submit /home/ning/my_spark/share/CoWorkAlg/execu_query.py"
     #     subprocess.run(['docker', 'exec','-it', 'my_spark-spark-1', '/opt/bitnami/python/bin/python','/opt/share/CoWorkAlg/execu_query.py'])
     def Get_reward(self):
-        with open('/home/ning/zorder/ML_GetFiles/done_reward.txt','r') as f:
+        with open('/home/ning/zorder/New_agg_result/done_reward.txt','r') as f:
             lines = f.readlines()
         reward = lines[-1]
         return reward
     def execu_predicted_files(self):
-        os.system('/bin/python3 /home/ning/zorder/ML_GetFiles/countPredicateFiles2.py')
+        # os.system('/bin/bash  /home/ning/zorderlearn/py38/bin/activate') 
+        os.chdir('/home/ning/zorderlearn/ValidateScanFileNumbers/')
+        # os.system("python /home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py --dataset=tpch --glob='tpch_sample-Dim4-2.3*' --num-queries=2000 --residual --layers=5 --fc-hiddens=256 --direct-io --column-masking --input-encoding=embed --output-encoding=embed")
+        os.system("python /home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py --dataset=dmv --glob='Dmv_sample-Dim4-3.2*' --num-queries=2000 --residual --layers=5 --fc-hiddens=256 --direct-io --column-masking --input-encoding=embed --output-encoding=embed")
 
     def Get_Single_min_ratio(self):
         with open('/home/ning/zorder/Actions_Rewards/single_min_select_ratio.txt','r') as f:
@@ -182,16 +189,16 @@ class SelColEnv(gym.Env):
         # open(self.dir_path + '/' + 'workload_erows_ratio.txt','w')
         # return self.dir_path
     def save_done_reward(self):
-        with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','wb') as f:
+        with open('/home/ning/zorder/New_agg_result/done_epsiode.pkl','wb') as f:
             pickle.dump(self.done_col_reward,f)
     def Get_done_reward(self):
-        with open('/home/ning/zorder/ML_GetFiles/done_epsiode.pkl','rb') as f:
+        with open('/home/ning/zorder/New_agg_result/done_epsiode.pkl','rb') as f:
             self.done_col_reward = pickle.load(f)
             return self.done_col_reward
     def init_reward_selected_cols(self):
-        with open('/home/ning/zorder/ML_GetFiles/reward.txt','w') as f:
+        with open('/home/ning/zorder/New_agg_result/reward.txt','w') as f:
             f.write('')
-        with open('/home/ning/zorder/ML_GetFiles/selected_cols.txt','w') as f:
+        with open('/home/ning/zorder/New_agg_result/select_cols.txt','w') as f:
             f.write('')
     def Get_best_reward_action(self):
         done_col_reward = list(self.done_col_reward.items())
