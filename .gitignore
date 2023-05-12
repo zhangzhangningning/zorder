@@ -4,3 +4,10 @@
 /GetZorder
 /New_agg_result
 /ML_GetFiles
+zorder/dmv-clean_order_sample.csv
+zorder/dmv-clean_order.csv
+zorder/lineitem_orderAllCols_sample.csv
+zorder/lineitem_orderAllCols.csv
+/sqls
+/zorderlearn
+Actions_Rewards

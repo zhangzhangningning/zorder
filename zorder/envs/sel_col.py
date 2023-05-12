@@ -8,7 +8,8 @@ import random
 import shutil
 import pickle
 import time
-
+import pandas as pd
+import sys
 
 class SelColEnv(gym.Env):
     # metadata = {'render.modes': ['human']}
@@ -17,15 +18,12 @@ class SelColEnv(gym.Env):
         # table涉及的列传入进来，0表示workload不涉及该列，1表示workload涉及该列
         # 比如（1,1,1）workload涉及表中的三列
         # self.aaa = params['']
-        ColShow = [1] * 11
-        # workload = [1, 1, 2, 1, 1, 3, 2, 1, 5, 4, 10, 4, 2, 1, 3, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 4, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 3, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1]
+        ColShow = [1] * 6
         workload = [13, 25, 17, 20, 15, 10]
         self.rand_num = 0
         self.best_reward = -100
         self.best_actions = []
-        # self.define_col_num = 6
-        # self.parent_path = '/home/ning/zorder/Actions_Rewards/'
-        # self.mkfile()
+        self.count = 0
         self.init_reward_selected_cols()
         self.done_col_reward = {}
         self.ColShow = np.array(ColShow)
@@ -47,8 +45,11 @@ class SelColEnv(gym.Env):
                 # "workload": spaces.Box(low = 0, high = 100, shape=(self.workload_length,), dtype = int),
             }
         )
+        self.all_dataframe = pd.read_csv("/home/ning/zorder/zorder/lineitem_orderAllCols.csv", sep='|')
+        #self.sample_dataframe = pd.read_csv("/home/ning/zorder/zorder/lineitem_orderAllCols_sample.csv", sep='|')
 
     def reset(self, seed=None, options=None):
+        self.count += 1
         # super().reset(seed=seed)
         self.idx = 0
         self.SelCol = np.array([0]*self.length)
@@ -65,16 +66,10 @@ class SelColEnv(gym.Env):
                 reward = -100
                 self.save_col('/home/ning/zorder/New_agg_result/select_cols.txt')
             else:
-                # select_cols_num = np.count_nonzero(self.SelCol == 1)
-                # while (np.count_nonzero(self.SelCol == 1) < self.define_col_num):
-                #     self.rand_num = random.randint(0,100)
-                #     self.SelCol[self.rand_num % len(self.ColShow)] = 1
-                # while (np.count_nonzero(self.SelCol == 1) > self.define_col_num):
-                #     self.rand_num = random.randint(0,100)
-                #     self.SelCol[self.rand_num % len(self.ColShow)] = 0
                 self.done_col_reward = self.Get_done_reward()
-                if self.done_col_reward:
-                    self.best_actions,self.best_reward = self.Get_best_reward_action()
+                if self.count > 500000:
+                    if self.done_col_reward:
+                        self.best_actions,self.best_reward = self.Get_best_reward_action()
                 cases = len(self.done_col_reward)
                 if cases >= 1:
                     self.save_col('/home/ning/zorder/New_agg_result/select_cols.txt')
@@ -103,15 +98,17 @@ class SelColEnv(gym.Env):
                 reward = str(reward)
                 reward = reward.strip('\n')
                 reward = float(reward)
-                if reward > float(self.best_reward):
-                    self.best_reward = reward
-                    self.best_actions = self.SelCol.copy()
+                if self.count > 500000:
+                    if reward > float(self.best_reward):
+                        self.best_reward = reward
+                        self.best_actions = self.SelCol.copy()
             self.save_rewards('/home/ning/zorder/New_agg_result/reward.txt',reward)
         else:
-            if self.best_reward > -100:
-                self.rand_num = random.randint(0,10)
-                if self.rand_num > 3:
-                    action = self.best_actions[self.idx]
+            if self.count > 500000:
+                if self.best_reward > -100:
+                    self.rand_num = random.randint(0,10)
+                    if self.rand_num > 3:
+                        action = self.best_actions[self.idx]
             done = False
             if action == 0:
                 self.SelCol[self.idx] = 0
@@ -122,10 +119,11 @@ class SelColEnv(gym.Env):
             self.next_state[self.idx] = 1
             reward = -110
         reward = float(reward)
-        if reward == self.best_reward:
-            # print(reward)
-            # print(self.best_actions)
-            reward = -reward
+        if self.count > 500000:
+            if reward == self.best_reward:
+                # print(reward)
+                # print(self.best_actions)
+                reward = -reward
         return self._get_obs(), reward, done ,{}
         # return self.next_state, reward, done ,{} 
 
@@ -168,7 +166,23 @@ class SelColEnv(gym.Env):
         # os.system('/bin/bash  /home/ning/zorderlearn/py38/bin/activate') 
         os.chdir('/home/ning/zorderlearn/ValidateScanFileNumbers/')
         # os.system("python /home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py --dataset=tpch --glob='tpch_sample-Dim4-2.3*' --num-queries=2000 --residual --layers=5 --fc-hiddens=256 --direct-io --column-masking --input-encoding=embed --output-encoding=embed")
-        os.system("python /home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py --dataset=dmv --glob='Dmv_sample-Dim4-3.2*' --num-queries=2000 --residual --layers=5 --fc-hiddens=256 --direct-io --column-masking --input-encoding=embed --output-encoding=embed")
+        #os.system("python /home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py --dataset=dmv --glob='Dmv_sample-Dim4-3.2*' --num-queries=2000 --residual --layers=5 --fc-hiddens=256 --direct-io --column-masking --input-encoding=embed --output-encoding=embed")
+
+        # 将DataFrame对象序列化为字节串
+        df1_bytes = pickle.dumps(self.all_dataframe)
+        #df2_bytes = pickle.dumps(self.sample_dataframe)
+
+        # 计算两个DataFrame对象的大小
+        size1 = np.uint32(len(df1_bytes))
+        #size2 = np.uint32(len(df2_bytes))
+
+        proc = subprocess.Popen(['python', '/home/ning/zorderlearn/ValidateScanFileNumbers/dim_reduction.py', '--dataset=tpch','--glob=tpch_sample-Dim4-2.3*', '--num-queries=2000', '--residual', '--layers=5', '--fc-hiddens=256', '--direct-io', '--column-masking', '--input-encoding=embed', '--output-encoding=embed'], stdin=subprocess.PIPE)
+        proc.stdin.write(size1.tobytes())
+        proc.stdin.write(df1_bytes)
+        #proc.stdin.write(size2.tobytes())
+        #proc.stdin.write(df2_bytes)
+        proc.stdin.close()
+        proc.wait()
 
     def Get_Single_min_ratio(self):
         with open('/home/ning/zorder/Actions_Rewards/single_min_select_ratio.txt','r') as f:
